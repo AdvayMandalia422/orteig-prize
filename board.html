@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orteig Prize Board</title>
+<meta name="description" content="The live class leaderboard for The Orteig Prize: who made it from New York to Paris, and how fast.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-16 -16 32 32'%3E%3Crect x='-16' y='-16' width='32' height='32' rx='6' fill='%230b2545'/%3E%3Cpath fill='%23f3b23a' d='M14,0 L6,-1.6 L2,-1.6 L0,-12 L-3,-12 L-3,-1.6 L-10,-1.4 L-12,-5 L-14,-5 L-13,0 L-14,5 L-12,5 L-10,1.4 L-3,1.6 L-3,12 L0,12 L2,1.6 L6,1.6 Z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/board.css?v=3">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="board.html"><b>THE ORTEIG PRIZE</b><span>CLASS BOARD</span></a>
+    <div class="live" id="live" hidden><span class="dot"></span><span id="liveText">Live</span></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- No class yet: create one -->
+  <section id="setup" class="setup" hidden>
+    <div class="setup-copy">
+      <p class="eyebrow">For teachers</p>
+      <h1 class="setup-title">Run the Orteig Prize with your class.</h1>
+      <ol class="steps">
+        <li><span><b>Make a board</b> for this class period. It gets its own 5-character code.</span></li>
+        <li><span><b>Put the board on the projector.</b> Students open the game link on their own devices and type the code.</span></li>
+        <li><span><b>Watch it fill in.</b> Each student's best flight shows up here a few seconds after they land or crash.</span></li>
+      </ol>
+      <p class="setup-note">Takes about 10 minutes. Afterward, open <b>Debrief</b> to compare the class's planes with Lindbergh's.</p>
+    </div>
+    <div class="setup-side">
+      <form class="sheet setup-form" id="createForm" novalidate>
+        <div class="field">
+          <label for="className">Class name</label>
+          <input id="className" maxlength="40" autocomplete="off" placeholder="Period 3 · U.S. History">
+        </div>
+        <p class="form-error" id="createError" role="alert"></p>
+        <button class="btn btn-primary" type="submit" id="createBtn">Make a class board</button>
+      </form>
+      <div class="sheet saved" id="savedBoards" hidden>
+        <div class="sheet-head"><span class="eyebrow">Your boards on this computer</span></div>
+        <ul id="savedList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live board -->
+  <section id="board" class="board" hidden>
+    <div class="board-main">
+      <div class="board-title">
+        <div>
+          <p class="eyebrow">New York → Paris · 3,600 miles</p>
+          <h1 id="boardName">Class board</h1>
+        </div>
+        <div class="tallies">
+          <div><b class="num" id="tPilots">0</b><span>pilots</span></div>
+          <div><b class="num" id="tFlights">0</b><span>flights</span></div>
+          <div><b class="num" id="tParis">0</b><span>reached Paris</span></div>
+        </div>
+      </div>
+
+      <div class="prize" id="prize">
+        <span class="eyebrow">The $25,000 prize goes to the first pilot to reach Paris</span>
+        <p id="prizeText">Nobody has made it yet.</p>
+      </div>
+
+      <div class="sheet table-sheet">
+        <table class="lb" id="lb">
+          <thead>
+            <tr><th class="c-rank">#</th><th>Pilot</th><th class="c-plane">Plane</th><th>Best flight</th><th class="c-n">Flights</th><th class="c-x"><span class="sr">Remove</span></th></tr>
+          </thead>
+          <tbody id="lbBody"></tbody>
+        </table>
+        <p class="lb-empty" id="lbEmpty">Waiting for the first flight. Students: open the link and type the class code.</p>
+      </div>
+    </div>
+
+    <aside class="board-side">
+      <div class="sheet join-panel">
+        <div class="sheet-head"><span class="eyebrow">Join this class</span></div>
+        <div class="join-body">
+          <div class="qr" id="qr" aria-label="QR code for the game link"></div>
+          <div class="join-text">
+            <span class="eyebrow">Class code</span>
+            <b class="code-big num" id="codeBig">·····</b>
+            <span class="eyebrow">Game link</span>
+            <span class="link-text num" id="joinLink"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sheet">
+        <div class="sheet-head"><span class="eyebrow">Latest flights</span></div>
+        <ol class="recent" id="recent"></ol>
+      </div>
+
+      <div class="side-actions">
+        <button class="btn btn-primary" type="button" id="debriefBtn">Debrief</button>
+        <button class="btn" type="button" id="toolsBtn" aria-expanded="false" aria-controls="tools">Teacher tools</button>
+      </div>
+
+      <div class="sheet tools" id="tools" hidden>
+        <div class="sheet-head"><span class="eyebrow">Teacher tools</span></div>
+        <div class="tools-body">
+          <p id="toolsKeyNote"></p>
+          <div id="teacherLinkBox" hidden>
+            <label class="eyebrow" for="teacherLink">Teacher link (to run this board on another computer)</label>
+            <div class="copy-row"><input id="teacherLink" readonly><button class="btn btn-small" type="button" id="copyTeacher">Copy</button></div>
+            <p class="tools-warn">Keep this link private. Anyone with it can remove pilots from this board.</p>
+          </div>
+          <p><a href="board.html?new=1">Make a board for another class</a></p>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <section id="missing" class="missing" hidden>
+    <h1>No class board with that code.</h1>
+    <p>Check the code, or <a href="board.html?new=1">make a new class board</a>.</p>
+  </section>
+</main>
+
+<dialog class="debrief" id="debrief" aria-labelledby="debriefTitle">
+  <div class="debrief-inner">
+    <div class="debrief-head">
+      <div>
+        <p class="eyebrow">Debrief · May 20–21, 1927</p>
+        <h2 id="debriefTitle">How Lindbergh built the Spirit of St. Louis</h2>
+      </div>
+      <button class="btn btn-small" type="button" id="closeDebrief">Close</button>
+    </div>
+    <div class="debrief-grid">
+      <div>
+        <div class="debrief-art" id="debriefArt"></div>
+        <ul class="facts">
+          <li><b>One long wing.</b> Less drag than a biplane, so each gallon went farther.</li>
+          <li><b>Wright Whirlwind J-5C.</b> 223 horsepower, air-cooled, and reliable for 33½ hours.</li>
+          <li><b>450 gallons of fuel.</b> The main tank sat in front of the cockpit, so he looked ahead with a periscope.</li>
+          <li><b>Alone.</b> No co-pilot, radio, or parachute, all to save weight. He stayed awake about 33 hours in the air, after a night without sleep.</li>
+          <li><b>Result:</b> took off at 7:52 a.m. from Roosevelt Field and landed at Le Bourget 33 h 30 m later.</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="debrief-h3">What your class built</h3>
+        <ol class="builds" id="builds"></ol>
+        <h3 class="debrief-h3">Talk about it</h3>
+        <ul class="questions">
+          <li>Why did Lindbergh fly alone, when other teams brought two to four people?</li>
+          <li>The Liberty engine had almost twice the power of the Whirlwind. Why couldn't it reach Paris?</li>
+          <li>Six men died going after the Orteig Prize before Lindbergh won it. Was the prize worth it?</li>
+          <li>Lindbergh won because he got there first, not fastest. How did the prize's rules shape the race?</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="assets/physics.js?v=3"></script>
+<script src="assets/api.js?v=3"></script>
+<script src="assets/plane-art.js?v=3"></script>
+<script src="assets/board.js?v=3"></script>
+</body>
+</html>

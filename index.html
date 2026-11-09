@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Orteig Prize</title>
+<meta name="description" content="Build a 1920s plane from real parts and try to fly nonstop from New York to Paris, like Charles Lindbergh in 1927. Class leaderboard included.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-16 -16 32 32'%3E%3Crect x='-16' y='-16' width='32' height='32' rx='6' fill='%230b2545'/%3E%3Cpath fill='%23f3b23a' d='M14,0 L6,-1.6 L2,-1.6 L0,-12 L-3,-12 L-3,-1.6 L-10,-1.4 L-12,-5 L-14,-5 L-13,0 L-14,5 L-12,5 L-10,1.4 L-3,1.6 L-3,12 L0,12 L2,1.6 L6,1.6 Z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/game.css?v=3">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="./"><b>THE ORTEIG PRIZE</b><span>NEW YORK → PARIS · MAY 1927</span></a>
+    <div class="chip" id="pilotChip" hidden>
+      <span id="chipPilot"></span>
+      <span class="num" id="chipClass"></span>
+      <button class="btn btn-small" id="switchPilot" type="button">Change</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Join -->
+  <section id="screen-join" class="screen wrap">
+    <div class="join">
+      <div class="join-copy">
+        <p class="eyebrow">Raymond Orteig's offer, 1919</p>
+        <h1 class="hero">$25,000 to the first pilot to fly nonstop from New York to Paris.</h1>
+        <p class="lede">By May 1927, six men had died trying. Build a plane from real 1920s parts, then fly it 3,600 miles across the Atlantic. Your best flight goes on the class board.</p>
+        <div class="join-art" id="joinArt" aria-hidden="true"></div>
+      </div>
+      <form class="join-card sheet" id="joinForm" novalidate>
+        <div class="field">
+          <label for="classCode">Class code</label>
+          <input id="classCode" class="code" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC12">
+        </div>
+        <div class="field">
+          <label for="pilotName">Pilot name</label>
+          <input id="pilotName" maxlength="20" autocomplete="off" spellcheck="false" placeholder="First name + last initial">
+        </div>
+        <p class="form-error" id="joinError" role="alert"></p>
+        <button class="btn btn-primary" type="submit" id="joinBtn">Enter the hangar</button>
+        <button class="btn-link" type="button" id="practiceBtn">Practice without a class</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Hangar -->
+  <section id="screen-hangar" class="screen wrap" hidden>
+    <div class="hangar">
+      <div class="drawing sheet">
+        <div class="sheet-head">
+          <span class="eyebrow">Hangar · Roosevelt Field</span>
+          <span class="eyebrow">Side view</span>
+        </div>
+        <div class="drawing-art" id="planeArt"></div>
+        <div class="gauges" id="gauges"></div>
+      </div>
+
+      <div class="parts-col">
+        <p class="parts-intro">Pick one of each. Every part changes how heavy, how fast, or how far your plane can go.</p>
+        <form class="parts" id="partsForm"></form>
+      </div>
+
+      <div class="fly-row">
+        <button class="btn btn-primary btn-fly" id="flyBtn" type="button">Fly to Paris</button>
+        <p class="fly-note" id="flyNote"></p>
+      </div>
+
+      <aside class="mini-board sheet" id="miniBoard" hidden>
+        <div class="sheet-head">
+          <span class="eyebrow" id="miniTitle">Class board</span>
+          <span class="eyebrow num" id="miniCount"></span>
+        </div>
+        <ol class="mini-list" id="miniList"></ol>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Flight -->
+  <section id="screen-flight" class="screen wrap" hidden>
+    <div class="flight">
+      <div class="map-wrap sheet" id="mapWrap">
+        <svg id="map" class="map" viewBox="0 0 1000 560" role="img" aria-label="Map of the North Atlantic with your route from New York to Paris"></svg>
+        <div class="drowsy" id="drowsy" hidden>
+          <div class="drowsy-veil"></div>
+          <p class="drowsy-msg" id="drowsyMsg">Your eyes are getting heavy…</p>
+          <button class="wake" id="wakeBtn" type="button" hidden>
+            <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="wake-track" cx="50" cy="50" r="46"/><circle class="wake-ring" id="wakeRing" cx="50" cy="50" r="46"/></svg>
+            <span>Wake up!</span>
+          </button>
+        </div>
+        <div class="map-banner" id="mapBanner" hidden></div>
+      </div>
+      <div class="hud">
+        <div class="hud-cell"><span class="eyebrow">Hours aloft</span><b class="num" id="hudHour">0.0</b></div>
+        <div class="hud-cell"><span class="eyebrow">To Paris</span><b class="num" id="hudLeft">3,600 mi</b></div>
+        <div class="hud-cell"><span class="eyebrow">Fuel</span><b class="num" id="hudFuel">0 gal</b><span class="fuelbar"><span id="fuelFill"></span></span></div>
+        <div class="hud-cell"><span class="eyebrow">Speed</span><b class="num" id="hudSpeed">0 mph</b></div>
+      </div>
+      <div class="flight-foot">
+        <ol class="log" id="flightLog" aria-live="polite"></ol>
+        <p class="hint" id="flightHint"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Result -->
+  <section id="screen-result" class="screen wrap" hidden>
+    <div class="result">
+      <article class="cable" aria-labelledby="resultTitle">
+        <header class="cable-head"><span>CABLEGRAM</span><span id="cableDate">MAY 21 1927</span></header>
+        <p class="cable-body" id="cableBody"></p>
+        <footer class="cable-foot" id="cableFoot"></footer>
+      </article>
+      <div class="result-side">
+        <p class="eyebrow" id="resultEyebrow">Flight report</p>
+        <h2 class="result-title" id="resultTitle"></h2>
+        <dl class="result-stats" id="resultStats"></dl>
+        <p class="lesson" id="resultLesson"></p>
+        <div class="standing" id="standing" hidden></div>
+        <div class="result-actions">
+          <button class="btn btn-primary" id="hangarBtn" type="button">Back to the hangar</button>
+          <button class="btn" id="reflyBtn" type="button">Fly the same plane again</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="assets/physics.js?v=3"></script>
+<script src="assets/map-data.js?v=3"></script>
+<script src="assets/api.js?v=3"></script>
+<script src="assets/plane-art.js?v=3"></script>
+<script src="assets/game.js?v=3"></script>
+</body>
+</html>

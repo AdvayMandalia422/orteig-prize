@@ -1,0 +1,191 @@
+/* The Orteig Prize — shared styles.
+   Layout concept: an engineer's blueprint sheet. Line drawings on Prussian
+   blue, amber only for things you can press. Jost stands in for Futura,
+   the typeface released in 1927, the year of the flight. */
+:root {
+  --ink: #0b2545;
+  --panel: #0f3260;
+  --panel-hi: #164378;
+  --line: #dbe9f6;
+  --line-2: rgba(219, 233, 246, 0.66);
+  --line-3: rgba(219, 233, 246, 0.26);
+  --line-4: rgba(219, 233, 246, 0.085);
+  --amber: #f3b23a;
+  --amber-hi: #ffc965;
+  --amber-ink: #241603;
+  --good: #86e6a7;
+  --bad: #ff9583;
+  --paper: #eef1f2;
+  --paper-ink: #17233a;
+  --paper-line: #c3ccd3;
+  --display: "Jost", "Futura", "Century Gothic", "Avenir Next", system-ui, sans-serif;
+  --mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius: 4px;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--ink);
+  background-image:
+    linear-gradient(var(--line-4) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-4) 1px, transparent 1px),
+    linear-gradient(rgba(219, 233, 246, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(219, 233, 246, 0.04) 1px, transparent 1px);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+  color: var(--line);
+  font-family: var(--display);
+  font-size: 16px;
+  line-height: 1.5;
+}
+[hidden] { display: none !important; }
+img, svg { max-width: 100%; }
+button, input { font: inherit; color: inherit; }
+a { color: var(--amber-hi); }
+:focus-visible { outline: 2px solid var(--amber-hi); outline-offset: 3px; }
+
+.wrap {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---- type ---- */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--line-2);
+}
+h1, h2, h3 { margin: 0; font-weight: 500; text-wrap: balance; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ---- top bar ---- */
+.topbar {
+  border-bottom: 1px solid var(--line-3);
+  background: rgba(11, 37, 69, 0.86);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(6px);
+}
+.topbar .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 10px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--line);
+  text-decoration: none;
+}
+.brand b {
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  font-size: 15px;
+}
+.brand span { font-family: var(--mono); font-size: 12px; color: var(--line-2); letter-spacing: 0.06em; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line-3);
+  border-radius: 999px;
+  padding: 4px 6px 4px 12px;
+  font-size: 14px;
+  min-width: 0;
+}
+.chip .num { color: var(--line-2); font-size: 12px; }
+
+/* ---- buttons & inputs ---- */
+.btn {
+  appearance: none;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--line);
+  border-radius: var(--radius);
+  padding: 10px 18px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.08s;
+}
+.btn:hover { background: var(--line-4); border-color: var(--line); }
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--amber-ink);
+  font-weight: 600;
+}
+.btn-primary:hover { background: var(--amber-hi); border-color: var(--amber-hi); }
+.btn-small { padding: 4px 10px; font-size: 13px; }
+.btn-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--amber-hi);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+.field { display: grid; gap: 6px; }
+.field label { font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--line-2); }
+.field input {
+  background: rgba(219, 233, 246, 0.05);
+  border: 1px solid var(--line-3);
+  border-bottom: 2px solid var(--line-2);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 10px 12px;
+  font-size: 20px;
+  width: 100%;
+}
+.field input:focus { outline: none; border-bottom-color: var(--amber); background: rgba(219, 233, 246, 0.08); }
+.field input.code { font-family: var(--mono); letter-spacing: 0.3em; text-transform: uppercase; }
+.form-error { color: var(--bad); min-height: 1.5em; margin: 0; font-size: 15px; }
+
+/* ---- panels ---- */
+.sheet {
+  border: 1px solid var(--line-3);
+  background: rgba(15, 50, 96, 0.72);
+  border-radius: var(--radius);
+}
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line-3);
+}
+
+/* ---- plane art (shared with the board) ---- */
+.pa .ln { fill: none; stroke: var(--line); stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.pa .ln-thin { fill: none; stroke: var(--line-2); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.pa .ln-dash { fill: none; stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.pa .fill { fill: var(--panel-hi); stroke: var(--line); stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.pa .fill-dark { fill: var(--ink); stroke: var(--line); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.pa .hatch { fill: url(#pa-hatch); stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.pa .txt { fill: var(--line); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; }
+.pa .txt-dim { fill: var(--line-2); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; }
+.pa .stamp rect { fill: none; stroke: var(--bad); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.pa .stamp text { fill: var(--bad); font-family: var(--display); font-weight: 600; font-size: 26px; letter-spacing: 0.18em; }
+.pa .prop-blur { fill: var(--line-3); stroke: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
