@@ -42,7 +42,7 @@
         short: "Whirlwind",
         blurb: "223 horsepower, air-cooled. Reliable and easy on fuel.",
         fact: "Lindbergh's engine. It ran for 33½ hours straight without a single problem.",
-        weight: 510, hp: 223, speed: 115, burn: 12,
+        weight: 510, hp: 223, speed: 115, burn: 11.5,
       },
       liberty: {
         name: "Liberty L-12",
@@ -103,12 +103,28 @@
   const SLOTS = ["wing", "engine", "tank", "crew"];
   const LINDBERGH = { wing: "mono", engine: "whirlwind", tank: "large", crew: "solo" };
 
-  // Solo pilots get drowsy at these hours after takeoff (fixed, so the
-  // server can check a flight). Each one is a "stay awake" moment.
+  // Moments in the flight, at fixed hours after takeoff so the server can
+  // check a flight. Solo pilots get drowsy; every plane flies through storms.
   const DROWSY_HOURS = [5, 9, 13, 17, 20, 23, 26, 29, 32, 35, 38, 41, 44, 47];
+  const STORM_HOURS = [7, 15, 24.5];
+  const STORMS = [
+    { title: "Rain squall over Nova Scotia", short: "Nova Scotia squall" },
+    { title: "Fog and sleet over the open ocean", short: "Mid-ocean fog" },
+    { title: "Storm clouds ahead of Ireland", short: "Storm near Ireland" },
+  ];
   const MISS_HOURS = 1.5; // asleep: wandered off course this long
   const DRIFT_HOURS_PER_SECOND = 0.8; // each second it takes you to wake up
   const MIN_REACTION_MS = 250;
+  const STORM_MAX_HOURS = 1.5; // blown off course for the whole storm
+
+  // Every moment this build could meet, in time order.
+  function eventsFor(build) {
+    const ev = [];
+    if (PARTS.crew[build.crew].pilots === 1) DROWSY_HOURS.forEach((t, n) => ev.push({ t, kind: "drowsy", n }));
+    STORM_HOURS.forEach((t, n) => ev.push({ t, kind: "storm", n }));
+    ev.sort((a, b) => a.t - b.t);
+    return ev;
+  }
 
   function windowMs(i) {
     return Math.max(800, 1600 - 100 * i);
@@ -137,10 +153,15 @@
     };
   }
 
-  // Drift (hours) caused by the i-th drowsy moment.
-  // outcome: reaction time in ms, or -1 / anything past the window = fell asleep.
-  function driftFor(i, outcome) {
-    const win = windowMs(i);
+  // Drift (hours) caused by one moment.
+  //   drowsy: outcome = reaction time in ms; -1 or past the window = fell asleep
+  //   storm:  outcome = permille of the storm spent on course (0–1000)
+  function driftFor(ev, outcome) {
+    if (ev.kind === "storm") {
+      const sc = typeof outcome === "number" && isFinite(outcome) ? Math.min(1000, Math.max(0, Math.round(outcome))) : 0;
+      return { hours: (1 - sc / 1000) * STORM_MAX_HOURS, missed: false, score: sc };
+    }
+    const win = windowMs(ev.n);
     if (typeof outcome !== "number" || !isFinite(outcome) || outcome < 0 || outcome > win) {
       return { hours: MISS_HOURS, missed: true };
     }
@@ -150,8 +171,8 @@
 
   /*
    * Fly the whole route.
-   * outcomes[i] is the result of the i-th drowsy moment (see driftFor).
-   * A missing outcome counts as falling asleep.
+   * outcomes[i] is the result of the i-th moment from eventsFor(build)
+   * (see driftFor). A missing outcome counts as the worst result.
    * Returns { status: "paris" | "fuel" | "crash", distance, hours, events, misses }.
    */
   function simulate(build, outcomes) {
@@ -160,19 +181,19 @@
     outcomes = outcomes || [];
     const v = s.speed;
     const E = s.endurance;
-    const times = s.solo ? DROWSY_HOURS : [];
+    const evs = eventsFor(build);
     let t = 0;
     let p = 0;
     let events = 0;
     let misses = 0;
 
-    for (let i = 0; i < times.length; i++) {
-      const e = times[i];
+    for (let i = 0; i < evs.length; i++) {
+      const e = evs[i].t;
       if (p + v * (e - t) >= ROUTE_MILES) break; // arrive before this moment
       if (e >= E) break; // fuel runs out before this moment
       p += v * (e - t);
       t = e;
-      const d = driftFor(i, outcomes[i]);
+      const d = driftFor(evs[i], outcomes[i]);
       events++;
       if (d.missed) misses++;
       if (t + d.hours >= E) {
@@ -188,8 +209,8 @@
   }
 
   const api = {
-    ROUTE_MILES, PARTS, SLOTS, LINDBERGH, DROWSY_HOURS, MISS_HOURS,
-    DRIFT_HOURS_PER_SECOND, MIN_REACTION_MS, windowMs, stats, driftFor, simulate,
+    ROUTE_MILES, PARTS, SLOTS, LINDBERGH, DROWSY_HOURS, STORM_HOURS, STORMS, MISS_HOURS,
+    DRIFT_HOURS_PER_SECOND, MIN_REACTION_MS, STORM_MAX_HOURS, windowMs, eventsFor, stats, driftFor, simulate,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.Orteig = api;

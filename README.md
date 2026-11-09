@@ -25,15 +25,17 @@ Each class period should get its own board. Boards you made on a computer are li
 
 - Too heavy for the wing's lift or the engine's power, and the plane crashes on takeoff, as René Fonck's did in 1926.
 - Range depends on fuel, engine thirst, and wing drag.
-- Solo pilots have to click **WAKE UP** (or press Space) when they get drowsy. Slow wake-ups cost time and fuel, and falling asleep costs 1½ hours off course.
+- **Storms (every plane):** three times on the way (a squall over Nova Scotia, fog and sleet mid-ocean, and storm clouds before Ireland), crosswinds push the plane's heading around. Students hold the **← →** arrow keys (or A/D, or the on-screen arrow buttons on tablets and phones) for about 5 seconds to keep the needle in the green. Time off course costs time and fuel. Biplanes are steadier in gusts, and racing wings get thrown around more.
+- **Stay awake (solo pilots only):** click **WAKE UP** or press Space when it appears. Slow wake-ups cost time and fuel, and falling asleep costs 1½ hours off course.
 - The leaderboard ranks distance first, then the fastest time to Paris.
 
-Three builds can reach Paris. Lindbergh's (about 33–37 hours, depending on how well you stay awake), a two-crew biplane with the Whirlwind and the big tank (35.7 hours, no skill needed), and a solo biplane that almost never makes it.
+Three builds can reach Paris. Lindbergh's lands in about 34–38 hours, depending on how well you stay awake and steer, and shaky flying can run it dry just short. A two-crew biplane with the Whirlwind and the big tank is the safe choice at about 36–38 hours. A solo biplane only makes it with excellent flying. Only a sharp player beats Lindbergh's real 33 h 30 m.
 
 ## Technical notes
 
 - Static site on GitHub Pages: `index.html` (game), `board.html` (board), `assets/`.
 - The leaderboard lives in the `orteig` schema of the Stax Supabase project. Browsers can only call five functions (`orteig_create_class`, `orteig_class`, `orteig_submit`, `orteig_board`, `orteig_remove_pilot`). Tables aren't exposed. See `supabase/migration.sql`.
-- The server re-runs every flight from the parts and the wake-up times, so a student can't post a better result than their plane allows. The flight model exists twice, in `assets/physics.js` and `orteig.simulate` in the migration. If you change one, change the other and check them with `node tools/parity-sql.mjs`.
+- The server re-runs every flight from the parts, the wake-up times and the storm scores, so a student can't post a better result than their plane allows. The flight model exists twice, in `assets/physics.js` and `orteig.simulate` in the migration. If you change one, change the other and check them with `node tools/parity-sql.mjs`.
 - `?fast=1` on the game URL speeds up playback for testing. It doesn't change scores.
+- Storm difficulty is tuned in `assets/storm.js`. `node tools/tune-storm.mjs` plays it with simulated players, and `node tools/balance.mjs` shows Paris times for different skill levels.
 - The map is pre-built from Natural Earth data: `cd tools && npm install && node build-map.mjs`.

@@ -49,8 +49,10 @@ declare
   e_weight float8; e_hp float8; e_speed float8; e_burn float8;
   t_gal float8; t_weight float8; c_weight float8; c_pilots int;
   v_weight float8; v_maxto float8; v float8; endur float8;
-  times float8[] := array[5,9,13,17,20,23,26,29,32,35,38,41,44,47]::float8[];
-  t float8 := 0; p float8 := 0; e float8; d float8; win int; r int; arrive float8;
+  d_times float8[] := array[5,9,13,17,20,23,26,29,32,35,38,41,44,47]::float8[];
+  s_times float8[] := array[7,15,24.5]::float8[];
+  nd int; ns int; di int := 1; si int := 1; i int := 0; kind text; n int;
+  t float8 := 0; p float8 := 0; e float8; d float8; win int; r int; sc int; arrive float8;
 begin
   case p_wing
     when 'mono'  then w_weight := 400; w_lift := 5200; w_drag := 1.0;
@@ -59,7 +61,7 @@ begin
     else raise exception 'bad_part';
   end case;
   case p_engine
-    when 'whirlwind' then e_weight := 510; e_hp := 223; e_speed := 115; e_burn := 12;
+    when 'whirlwind' then e_weight := 510; e_hp := 223; e_speed := 115; e_burn := 11.5;
     when 'liberty'   then e_weight := 850; e_hp := 400; e_speed := 135; e_burn := 24;
     when 'ox5'       then e_weight := 390; e_hp := 90;  e_speed := 75;  e_burn := 6;
     else raise exception 'bad_part';
@@ -85,29 +87,42 @@ begin
 
   v := e_speed / sqrt(w_drag);
   endur := t_gal / e_burn;
+  nd := case when c_pilots = 1 then array_length(d_times, 1) else 0 end;
+  ns := array_length(s_times, 1);
 
-  if c_pilots = 1 then
-    for i in 1 .. array_length(times, 1) loop
-      e := times[i];
-      exit when p + v * (e - t) >= 3600;
-      exit when e >= endur;
-      p := p + v * (e - t);
-      t := e;
-      win := greatest(800, 1600 - 100 * (i - 1));
-      r := case when p_outcomes is not null and coalesce(array_length(p_outcomes, 1), 0) >= i
-                then p_outcomes[i] else null end;
+  -- walk the drowsy moments (solo only) and storms in time order
+  loop
+    if di <= nd and (si > ns or d_times[di] < s_times[si]) then
+      e := d_times[di]; kind := 'drowsy'; n := di - 1; di := di + 1;
+    elsif si <= ns then
+      e := s_times[si]; kind := 'storm'; n := si - 1; si := si + 1;
+    else
+      exit;
+    end if;
+    i := i + 1;
+    exit when p + v * (e - t) >= 3600;
+    exit when e >= endur;
+    p := p + v * (e - t);
+    t := e;
+    r := case when p_outcomes is not null and coalesce(array_length(p_outcomes, 1), 0) >= i
+              then p_outcomes[i] else null end;
+    if kind = 'storm' then
+      sc := greatest(0, least(1000, coalesce(r, 0)));
+      d := (1::float8 - sc::float8 / 1000::float8) * 1.5::float8;
+    else
+      win := greatest(800, 1600 - 100 * n);
       if r is null or r < 0 or r > win then
         d := 1.5::float8; misses := misses + 1;
       else
         d := (greatest(250, r)::float8 / 1000::float8) * 0.8::float8;
       end if;
-      events := events + 1;
-      if t + d >= endur then
-        status := 'fuel'; distance := p; hours := endur; return;
-      end if;
-      t := t + d;
-    end loop;
-  end if;
+    end if;
+    events := events + 1;
+    if t + d >= endur then
+      status := 'fuel'; distance := p; hours := endur; return;
+    end if;
+    t := t + d;
+  end loop;
 
   arrive := t + (3600 - p) / v;
   if arrive <= endur then

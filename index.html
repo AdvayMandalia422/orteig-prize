@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=4">
-<link rel="stylesheet" href="assets/game.css?v=4">
+<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/game.css?v=6">
 </head>
 <body>
 <header class="topbar">
@@ -95,6 +95,34 @@
             <span>Wake up!</span>
           </button>
         </div>
+        <div class="storm" id="storm" hidden>
+          <div class="storm-veil"></div>
+          <div class="storm-panel">
+            <p class="storm-title" id="stormTitle">Storm</p>
+            <p class="storm-sub" id="stormSub">Crosswinds! Keep your heading in the green.</p>
+            <div class="heading" id="heading" aria-hidden="true">
+              <div class="heading-track">
+              <div class="heading-ticks" id="headingTicks"></div>
+              <div class="heading-zone" id="headingZone"></div>
+              <span class="heading-label left">Off course</span>
+              <span class="heading-label mid">Paris</span>
+              <span class="heading-label right">Off course</span>
+              <div class="heading-needle" id="headingNeedle">
+                <svg viewBox="-16 -16 32 32"><path d="M0,-14 L1.6,-6 L1.6,-2 L12,0 L12,3 L1.6,3 L1.4,10 L5,12 L5,14 L0,13 L-5,14 L-5,12 L-1.4,10 L-1.6,3 L-12,3 L-12,0 L-1.6,-2 L-1.6,-6 Z"/></svg>
+              </div>
+              </div>
+            </div>
+            <div class="storm-meta">
+              <span class="storm-pct num" id="stormPct">On course 100%</span>
+              <span class="storm-clock"><span id="stormClock"></span></span>
+            </div>
+            <div class="steer-row">
+              <button class="steer" id="steerL" type="button" aria-label="Steer left">←</button>
+              <span class="steer-hint"><span class="hint-keys">Hold the <b>←</b> and <b>→</b> arrow keys</span><span class="hint-touch">Hold the arrow buttons</span></span>
+              <button class="steer" id="steerR" type="button" aria-label="Steer right">→</button>
+            </div>
+          </div>
+        </div>
         <div class="map-banner" id="mapBanner" hidden></div>
       </div>
       <div class="hud">
@@ -133,10 +161,11 @@
   </section>
 </main>
 
-<script src="assets/physics.js?v=4"></script>
-<script src="assets/map-data.js?v=4"></script>
-<script src="assets/api.js?v=4"></script>
-<script src="assets/plane-art.js?v=4"></script>
-<script src="assets/game.js?v=4"></script>
+<script src="assets/physics.js?v=6"></script>
+<script src="assets/storm.js?v=6"></script>
+<script src="assets/map-data.js?v=6"></script>
+<script src="assets/api.js?v=6"></script>
+<script src="assets/plane-art.js?v=6"></script>
+<script src="assets/game.js?v=6"></script>
 </body>
 </html>

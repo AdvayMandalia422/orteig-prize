@@ -6,6 +6,8 @@
   const F = window.OrteigFmt;
   const Art = window.OrteigArt;
   const MAP = window.ORTEIG_MAP;
+  const Storm = window.OrteigStorm;
+  const NEEDLE_SPAN = 46; // % of the gauge on each side of center at full deflection
   const $ = (id) => document.getElementById(id);
 
   // Real seconds per hour of flight. ?fast=1 speeds up playback for testing;
@@ -187,8 +189,8 @@
 
     const note = $("flyNote");
     if (!s.canTakeOff) note.textContent = "You can still try. René Fonck did in 1926, and his overloaded plane crashed at the end of this runway.";
-    else if (s.solo) note.textContent = "Flying solo: you'll need to stay awake. Click WAKE UP or press Space when it appears.";
-    else note.textContent = "Two crew take turns at the controls, so nobody falls asleep.";
+    else if (s.solo) note.textContent = "Flying solo: stay awake (click WAKE UP or press Space), and steer through 3 storms with the ← → arrow keys.";
+    else note.textContent = "Two crew take turns, so nobody falls asleep. You'll still steer through 3 storms with the ← → arrow keys.";
   }
 
   // ---------------------------------------------------------------- mini board
@@ -279,9 +281,15 @@
     return { x: R[n][1], y: R[n][2], a: Math.atan2(R[n][2] - R[n - 1][2], R[n][1] - R[n - 1][1]), idx: n + 1 };
   }
 
-  function placePlane(mi, wobble) {
+  function placePlane(mi, wobble, lateral) {
     const pos = routeAt(mi);
     let x = pos.x, y = pos.y, ang = pos.a;
+    if (lateral) {
+      // blown sideways in a storm
+      x += -Math.sin(pos.a) * lateral * 16;
+      y += Math.cos(pos.a) * lateral * 16;
+      ang += lateral * 0.5;
+    }
     if (wobble) {
       // wander off course, perpendicular to the route
       const off = Math.sin(wobble * 2.2) * 14;
@@ -339,18 +347,20 @@
     const s = O.stats(build);
     F_ = {
       build, s, t: 0, p: 0, i: 0, outcomes: [], phase: "takeoff", last: 0,
-      nextStop: 1, midIdx: 0, wanderStart: 0, wanderEnd: 0, drowsy: null, done: false,
+      events: O.eventsFor(build),
+      nextStop: 1, midIdx: 0, wanderStart: 0, wanderEnd: 0, drowsy: null, storm: null, done: false,
     };
     if (!mapEls) drawMap();
     $("flightLog").innerHTML = "";
     banner("");
     hideDrowsy();
+    hideStorm();
     MAP.stops.forEach((st, i) => $("stop-" + st.id).classList.toggle("passed", i === 0));
     placePlane(0);
     updateHud();
     $("flightHint").textContent = s.solo
-      ? "You're flying solo. When WAKE UP appears, click it or press Space as fast as you can. Don't press early."
-      : "Your navigator shares the flying, so you can sit back and watch.";
+      ? "Solo: when WAKE UP appears, click it or press Space fast (not early). In storms, hold ← → to keep your heading in the green."
+      : "Your navigator keeps you awake. In storms, hold ← → to keep your heading in the green.";
     show("flight");
 
     if (!s.canTakeOff) {
@@ -421,8 +431,7 @@
     const v = f.s.speed, E = f.s.endurance;
 
     if (f.phase === "cruise") {
-      const times = f.s.solo ? O.DROWSY_HOURS : [];
-      const nextE = f.i < times.length ? times[f.i] : Infinity;
+      const nextE = f.i < f.events.length ? f.events[f.i].t : Infinity;
       const T = f.t + (O.ROUTE_MILES - f.p) / v;
       // Same order of checks as Orteig.simulate and the server.
       const arrivingFirst = T <= nextE;
@@ -436,7 +445,8 @@
         updateHud();
         if (arrivingFirst) return T <= E ? finish("paris") : finish("fuel");
         if (nextE >= E) return finish("fuel");
-        return beginDrowsy();
+        const ev = f.events[f.i];
+        return ev.kind === "storm" ? beginStorm(ev) : beginDrowsy(ev);
       }
       f.p += v * dt;
       f.t = target;
@@ -458,12 +468,11 @@
   }
 
   // ---- stay-awake moments
-  function beginDrowsy() {
+  function beginDrowsy(ev) {
     const f = F_;
     f.phase = "drowsy";
-    const i = f.i;
-    const win = O.windowMs(i);
-    const d = { i, win, shownAt: 0, resolved: false, timer: 0 };
+    const win = O.windowMs(ev.n);
+    const d = { ev, win, shownAt: 0, resolved: false, timer: 0 };
     f.drowsy = d;
     const box = $("drowsy");
     box.hidden = false;
@@ -521,8 +530,8 @@
     if (d.resolved) return;
     d.resolved = true;
     const f = F_;
-    f.outcomes[d.i] = outcome;
-    const res = O.driftFor(d.i, outcome);
+    f.outcomes[f.i] = outcome;
+    const res = O.driftFor(d.ev, outcome);
     if (res.missed) {
       log("You fell asleep! The plane wandered off course for an hour and a half.", "bad");
     } else if (why === "early") {
@@ -531,13 +540,137 @@
       const mins = Math.round(res.hours * 60);
       log(`Woke up in ${(Math.max(O.MIN_REACTION_MS, outcome) / 1000).toFixed(2)} s. Drifted off course for ${mins} min.`, outcome < 450 ? "good" : "");
     }
-    f.i++;
     hideDrowsy();
+    startWander(res.hours);
+  }
+
+  function startWander(hours) {
+    const f = F_;
+    f.i++;
     f.phase = "wander";
     f.wanderStart = f.t;
-    f.wanderEnd = f.t + res.hours;
+    f.wanderEnd = f.t + hours;
     f.last = performance.now();
     raf = requestAnimationFrame(tick);
+  }
+
+  // ---- storms: hold your heading
+  const steer = { left: false, right: false, btnL: false, btnR: false };
+  function steerInput() {
+    return ((steer.right || steer.btnR) ? 1 : 0) - ((steer.left || steer.btnL) ? 1 : 0);
+  }
+
+  function buildHeadingTicks() {
+    let html = "";
+    for (let k = -10; k <= 10; k++) {
+      const left = 50 + (k / 10) * NEEDLE_SPAN;
+      html += `<i class="${k % 5 === 0 ? "major" : ""}" style="left:${left}%"></i>`;
+    }
+    $("headingTicks").innerHTML = html;
+    const half = Storm.ZONE * NEEDLE_SPAN;
+    $("headingZone").style.left = 50 - half + "%";
+    $("headingZone").style.width = 2 * half + "%";
+  }
+
+  function beginStorm(ev) {
+    const f = F_;
+    f.phase = "storm";
+    const info = O.STORMS[ev.n] || O.STORMS[0];
+    const st = {
+      ev,
+      sim: Storm.create(Math.floor(Math.random() * 2147483647), f.build.wing),
+      started: false, last: 0, resolved: false,
+    };
+    f.storm = st;
+    log(info.title + ". Crosswinds!");
+    $("stormTitle").textContent = info.title;
+    $("stormSub").textContent = "Get ready to steer…";
+    $("stormPct").textContent = "On course 100%";
+    $("stormClock").style.transform = "scaleX(1)";
+    drawNeedle(0, 0);
+    $("storm").hidden = false;
+    setTimeout(() => {
+      if (st.resolved || F_ !== f) return;
+      st.started = true;
+      st.last = performance.now();
+      $("stormSub").textContent = "Crosswinds are pushing you off course. Keep the plane in the green.";
+      raf = requestAnimationFrame(stormTick);
+    }, 1000);
+  }
+
+  function drawNeedle(x, v) {
+    const n = $("headingNeedle");
+    n.style.left = 50 + x * NEEDLE_SPAN + "%";
+    n.style.transform = `rotate(${Math.max(-30, Math.min(30, v * 22)).toFixed(1)}deg)`;
+    const on = Math.abs(x) <= Storm.ZONE;
+    n.classList.toggle("off", !on);
+    $("headingZone").classList.toggle("on", on);
+  }
+
+  function stormTick(ts) {
+    const f = F_;
+    const st = f && f.storm;
+    if (!st || st.resolved || f.done) return;
+    const dt = Math.min(0.25, Math.max(0, (ts - st.last) / 1000));
+    st.last = ts;
+    const over = Storm.step(st.sim, dt, steerInput());
+    drawNeedle(st.sim.x, st.sim.v);
+    placePlane(f.p, 0, st.sim.x);
+    $("stormPct").textContent = "On course " + Math.round(Storm.score(st.sim) / 10) + "%";
+    $("stormClock").style.transform = `scaleX(${Math.max(0, 1 - st.sim.t / Storm.DURATION).toFixed(3)})`;
+    if (over) return endStorm(st);
+    raf = requestAnimationFrame(stormTick);
+  }
+
+  function endStorm(st) {
+    st.resolved = true;
+    const f = F_;
+    const sc = Storm.score(st.sim);
+    f.outcomes[f.i] = sc;
+    const res = O.driftFor(st.ev, sc);
+    const mins = Math.round(res.hours * 60);
+    $("stormSub").textContent = `Through the storm. You held your heading ${Math.round(sc / 10)}% of the time.`;
+    log(mins === 0
+      ? `Held your heading ${Math.round(sc / 10)}% of the storm and stayed right on course.`
+      : `Held your heading ${Math.round(sc / 10)}% of the storm. Blown off course for ${mins} min.`, sc >= 850 ? "good" : sc < 500 ? "bad" : "");
+    setTimeout(() => {
+      if (F_ !== f || f.done) return;
+      hideStorm();
+      placePlane(f.p);
+      startWander(res.hours);
+    }, 900);
+  }
+
+  function hideStorm() {
+    $("storm").hidden = true;
+    steer.btnL = steer.btnR = false;
+    $("steerL").classList.remove("down");
+    $("steerR").classList.remove("down");
+  }
+
+  function bindSteering() {
+    const keyDir = (e) => (e.key === "ArrowLeft" || e.code === "KeyA" ? "left" : e.key === "ArrowRight" || e.code === "KeyD" ? "right" : null);
+    document.addEventListener("keydown", (e) => {
+      const d = keyDir(e);
+      if (!d || $("screen-flight").hidden) return;
+      e.preventDefault();
+      steer[d] = true;
+    });
+    document.addEventListener("keyup", (e) => {
+      const d = keyDir(e);
+      if (d) steer[d] = false;
+    });
+    window.addEventListener("blur", () => { steer.left = steer.right = steer.btnL = steer.btnR = false; });
+    for (const [id, key] of [["steerL", "btnL"], ["steerR", "btnR"]]) {
+      const b = $(id);
+      const on = (e) => { e.preventDefault(); steer[key] = true; b.classList.add("down"); try { b.setPointerCapture(e.pointerId); } catch (_) { /* old browsers */ } };
+      const off = () => { steer[key] = false; b.classList.remove("down"); };
+      b.addEventListener("pointerdown", on);
+      b.addEventListener("pointerup", off);
+      b.addEventListener("pointercancel", off);
+      b.addEventListener("lostpointercapture", off);
+      b.addEventListener("contextmenu", (e) => e.preventDefault());
+    }
   }
 
   function hideDrowsy() {
@@ -551,8 +684,9 @@
     f.done = true;
     cancelAnimationFrame(raf);
     hideDrowsy();
+    hideStorm();
     const result = O.simulate(f.build, f.outcomes);
-    state.lastFlight = { build: f.build, outcomes: f.outcomes.slice(), result, server: null };
+    state.lastFlight = { build: f.build, outcomes: f.outcomes.slice(), events: f.events, result, server: null };
     if (result.status === "paris") {
       $("stop-paris").classList.add("passed");
       placePlane(O.ROUTE_MILES);
@@ -574,8 +708,13 @@
     const s = O.stats(lf.build);
     const P = O.PARTS;
     const name = (state.pilot || "Pilot").toUpperCase();
-    const wake = lf.outcomes.filter((x) => typeof x === "number" && x >= 0);
-    const avgMs = wake.length ? wake.reduce((a, b) => a + Math.max(O.MIN_REACTION_MS, b), 0) / wake.length : 0;
+    // what happened at each moment that actually came up in this flight
+    const met = lf.events.slice(0, r.events).map((ev, i) => ({ ev, out: lf.outcomes[i] }));
+    const drowsy = met.filter((m) => m.ev.kind === "drowsy");
+    const wake = drowsy.filter((m) => !O.driftFor(m.ev, m.out).missed).map((m) => Math.max(O.MIN_REACTION_MS, m.out));
+    const avgMs = wake.length ? wake.reduce((a, b) => a + b, 0) / wake.length : 0;
+    const storms = met.filter((m) => m.ev.kind === "storm").map((m) => O.driftFor(m.ev, m.out).score);
+    const stormAvg = storms.length ? storms.reduce((a, b) => a + b, 0) / storms.length / 10 : null;
     const title = $("resultTitle");
     let cable, lesson, headline, cls;
     const place = F.place(r.distance);
@@ -591,9 +730,10 @@
       };
       const vs = Math.round(Math.abs(diff) * 60) === 0 ? "The same time as Lindbergh" : diff < 0 ? `${span(-diff)} faster than Lindbergh` : `${span(diff)} slower than Lindbergh`;
       cable = `PILOT ${name} LANDED LE BOURGET PARIS AFTER ${F.hours(r.hours).replace(" h ", " HRS ").replace(" m", " MIN")} NONSTOP FROM NEW YORK STOP CROWD OF 100000 STOP`;
+      const Vs = vs.charAt(0).toUpperCase() + vs.slice(1);
       lesson = s.solo
-        ? `${vs.charAt(0).toUpperCase() + vs.slice(1)}, who took 33 h 30 m. You flew solo like he did, and every second it took you to wake up cost you time.`
-        : `${vs.charAt(0).toUpperCase() + vs.slice(1)}, who took 33 h 30 m. Your navigator kept you awake and on course, but the extra weight meant slower biplane wings.`;
+        ? `${Vs}, who took 33 h 30 m. You flew solo like he did. Every second it took you to wake up, and every moment off course in a storm, cost you time.`
+        : `${Vs}, who took 33 h 30 m. Your navigator kept you awake, but carrying a second person meant slower wings. Every moment off course in a storm cost you time too.`;
     } else if (r.status === "crash") {
       cls = "bad";
       headline = "Crashed on takeoff";
@@ -609,7 +749,9 @@
       if (s.range < O.ROUTE_MILES) {
         lesson = `Your plane could only fly about ${F.miles(s.range)} miles on a full tank. A ${P.engine[lf.build.engine].short} burns ${P.engine[lf.build.engine].burn} gallons an hour, and Paris is 3,600 miles away. Try a bigger tank, a thriftier engine, or less drag.`;
       } else {
-        lesson = `Your plane had enough fuel for Paris, but every time you dozed off you wandered off course and burned fuel you needed. Lindbergh fought to stay awake for the whole flight.`;
+        lesson = s.solo
+          ? `Your plane had enough fuel for Paris, but dozing off and getting blown off course in the storms burned fuel you needed. Lindbergh fought to stay awake for the whole flight.`
+          : `Your plane had enough fuel for Paris, but getting blown off course in the storms burned fuel you needed. Hold your heading in the green to save fuel.`;
       }
       if (place.water && r.distance > 1180 && r.distance < 3002) lesson += " Twelve days before Lindbergh took off, Nungesser and Coli disappeared trying to cross the Atlantic. They were never found.";
     }
@@ -624,12 +766,14 @@
       ["Distance", F.miles(r.status === "paris" ? 3600 : Math.floor(r.distance)) + " mi"],
       ["Time in the air", r.status === "crash" ? "0 h 00 m" : F.hours(r.hours)],
     ];
-    if (s.solo && r.status !== "crash") {
-      stats.push(["Wake-ups", r.events ? `${r.events - r.misses} of ${r.events}` : "none needed"]);
-      stats.push(["Avg. wake-up time", wake.length ? (avgMs / 1000).toFixed(2) + " s" : "—"]);
-    } else {
+    if (r.status === "crash") {
       stats.push(["Takeoff weight", F.miles(s.weight) + " lb"]);
-      stats.push(["Cruise speed", Math.round(s.speed) + " mph"]);
+      stats.push(["Most it could lift", F.miles(s.maxTakeoff) + " lb"]);
+    } else {
+      stats.push(["On course in storms", stormAvg === null ? "no storms" : Math.round(stormAvg) + "%"]);
+      stats.push(s.solo
+        ? ["Wake-ups", drowsy.length ? `${wake.length} of ${drowsy.length}${wake.length ? " · " + (avgMs / 1000).toFixed(2) + " s" : ""}` : "none needed"]
+        : ["Cruise speed", Math.round(s.speed) + " mph"]);
     }
     $("resultStats").innerHTML = stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${F.esc(v)}</dd></div>`).join("");
     $("resultLesson").textContent = lesson;
@@ -677,6 +821,8 @@
   // ---------------------------------------------------------------- wire up
   function init() {
     buildPartsForm();
+    buildHeadingTicks();
+    bindSteering();
     initJoin();
     $("flyBtn").addEventListener("click", startFlight);
     $("hangarBtn").addEventListener("click", () => { renderHangar(); show("hangar"); });
