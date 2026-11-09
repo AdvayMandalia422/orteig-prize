@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=3">
-<link rel="stylesheet" href="assets/board.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=4">
+<link rel="stylesheet" href="assets/board.css?v=4">
 </head>
 <body>
 <header class="topbar">
@@ -24,7 +24,6 @@
   <!-- No class yet: create one -->
   <section id="setup" class="setup" hidden>
     <div class="setup-copy">
-      <p class="eyebrow">For teachers</p>
       <h1 class="setup-title">Run the Orteig Prize with your class.</h1>
       <ol class="steps">
         <li><span><b>Make a board</b> for this class period. It gets its own 5-character code.</span></li>
@@ -65,7 +64,7 @@
       </div>
 
       <div class="prize" id="prize">
-        <span class="eyebrow">The $25,000 prize goes to the first pilot to reach Paris</span>
+        <span class="prize-rule">The $25,000 prize goes to the first pilot to reach Paris</span>
         <p id="prizeText">Nobody has made it yet.</p>
       </div>
 
@@ -109,7 +108,7 @@
         <div class="tools-body">
           <p id="toolsKeyNote"></p>
           <div id="teacherLinkBox" hidden>
-            <label class="eyebrow" for="teacherLink">Teacher link (to run this board on another computer)</label>
+            <label class="tools-label" for="teacherLink">Teacher link, for running this board on another computer</label>
             <div class="copy-row"><input id="teacherLink" readonly><button class="btn btn-small" type="button" id="copyTeacher">Copy</button></div>
             <p class="tools-warn">Keep this link private. Anyone with it can remove pilots from this board.</p>
           </div>
@@ -161,9 +160,9 @@
 </dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-<script src="assets/physics.js?v=3"></script>
-<script src="assets/api.js?v=3"></script>
-<script src="assets/plane-art.js?v=3"></script>
-<script src="assets/board.js?v=3"></script>
+<script src="assets/physics.js?v=4"></script>
+<script src="assets/api.js?v=4"></script>
+<script src="assets/plane-art.js?v=4"></script>
+<script src="assets/board.js?v=4"></script>
 </body>
 </html>
